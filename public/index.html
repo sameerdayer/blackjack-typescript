@@ -1,0 +1,727 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Blackjack Terminal</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.css"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Share+Tech+Mono&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      :root {
+        --felt: #0a2e1a;
+        --felt-light: #0d3d22;
+        --gold: #c9a84c;
+        --gold-bright: #f0c96e;
+        --cream: #f5ecd7;
+        --red: #c0392b;
+        --terminal-bg: #0c0c0c;
+        --terminal-green: #00ff88;
+      }
+
+      html,
+      body {
+        height: 100%;
+        background: var(--felt);
+        font-family: "Share Tech Mono", monospace;
+        overflow: hidden;
+      }
+
+      /* Felt texture */
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background-image:
+          repeating-linear-gradient(
+            45deg,
+            transparent,
+            transparent 2px,
+            rgba(0, 0, 0, 0.03) 2px,
+            rgba(0, 0, 0, 0.03) 4px
+          ),
+          repeating-linear-gradient(
+            -45deg,
+            transparent,
+            transparent 2px,
+            rgba(0, 0, 0, 0.03) 2px,
+            rgba(0, 0, 0, 0.03) 4px
+          );
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      .layout {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+        height: 100vh;
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 24px 32px;
+        gap: 20px;
+      }
+
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid rgba(201, 168, 76, 0.3);
+        padding-bottom: 16px;
+      }
+
+      .logo {
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+      }
+
+      .logo h1 {
+        font-family: "Playfair Display", serif;
+        font-size: 2rem;
+        font-weight: 900;
+        color: var(--gold);
+        letter-spacing: 0.04em;
+        text-shadow: 0 0 30px rgba(201, 168, 76, 0.4);
+      }
+
+      .logo .suits {
+        font-size: 1.2rem;
+        color: rgba(201, 168, 76, 0.6);
+        letter-spacing: 4px;
+      }
+
+      .status-badge {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.75rem;
+        color: rgba(201, 168, 76, 0.7);
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #555;
+        transition:
+          background 0.3s,
+          box-shadow 0.3s;
+      }
+
+      .status-dot.connected {
+        background: var(--terminal-green);
+        box-shadow: 0 0 8px var(--terminal-green);
+        animation: pulse 2s infinite;
+      }
+
+      .status-dot.error {
+        background: var(--red);
+        box-shadow: 0 0 8px var(--red);
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
+      }
+
+      /* Terminal container */
+      .terminal-wrap {
+        position: relative;
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid rgba(201, 168, 76, 0.2);
+        box-shadow:
+          0 0 0 1px rgba(0, 0, 0, 0.5),
+          0 20px 60px rgba(0, 0, 0, 0.6),
+          inset 0 1px 0 rgba(201, 168, 76, 0.1);
+      }
+
+      .terminal-chrome {
+        background: #1a1a1a;
+        padding: 10px 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border-bottom: 1px solid #2a2a2a;
+      }
+
+      .dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+      }
+      .dot.red {
+        background: #ff5f57;
+      }
+      .dot.yellow {
+        background: #febc2e;
+      }
+      .dot.green {
+        background: #28c840;
+      }
+
+      .terminal-title {
+        flex: 1;
+        text-align: center;
+        font-size: 0.72rem;
+        color: #555;
+        letter-spacing: 0.08em;
+      }
+
+      #terminal {
+        background: var(--terminal-bg);
+        padding: 12px;
+        height: calc(100% - 38px);
+      }
+
+      .terminal-wrap {
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* scrollbar track */
+      .xterm-viewport::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      .xterm-viewport::-webkit-scrollbar-track {
+        background: transparent;
+      }
+
+      /* scrollbar thumb — match your gold theme */
+      .xterm-viewport::-webkit-scrollbar-thumb {
+        background: rgba(201, 168, 76, 0.3);
+        border-radius: 3px;
+      }
+
+      .xterm-viewport::-webkit-scrollbar-thumb:hover {
+        background: rgba(201, 168, 76, 0.6);
+      }
+
+      /* Input area */
+      .input-section {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .prompt-display {
+        font-size: 0.8rem;
+        color: var(--gold);
+        letter-spacing: 0.06em;
+        min-height: 20px;
+        opacity: 0.8;
+        font-family: "Share Tech Mono", monospace;
+      }
+
+      .input-row {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .input-prefix {
+        color: var(--terminal-green);
+        font-size: 1rem;
+        flex-shrink: 0;
+      }
+
+      #userInput {
+        flex: 1;
+        background: rgba(0, 0, 0, 0.6);
+        border: 1px solid rgba(201, 168, 76, 0.3);
+        border-radius: 4px;
+        color: var(--cream);
+        font-family: "Share Tech Mono", monospace;
+        font-size: 1rem;
+        padding: 10px 14px;
+        outline: none;
+        transition:
+          border-color 0.2s,
+          box-shadow 0.2s;
+        letter-spacing: 0.05em;
+      }
+
+      #userInput:focus {
+        border-color: rgba(201, 168, 76, 0.6);
+        box-shadow: 0 0 12px rgba(201, 168, 76, 0.1);
+      }
+
+      #userInput:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+      }
+
+      #sendBtn {
+        background: linear-gradient(135deg, var(--gold), #a07828);
+        border: none;
+        border-radius: 4px;
+        color: #1a1a0a;
+        font-family: "Playfair Display", serif;
+        font-size: 0.85rem;
+        font-weight: 700;
+        padding: 10px 24px;
+        cursor: pointer;
+        letter-spacing: 0.06em;
+        transition:
+          opacity 0.2s,
+          transform 0.1s;
+      }
+
+      #sendBtn:hover {
+        opacity: 0.9;
+      }
+      #sendBtn:active {
+        transform: scale(0.97);
+      }
+      #sendBtn:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+      }
+
+      /* Quick action chips */
+      .quick-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .chip {
+        background: rgba(201, 168, 76, 0.08);
+        border: 1px solid rgba(201, 168, 76, 0.2);
+        border-radius: 20px;
+        color: rgba(201, 168, 76, 0.8);
+        font-family: "Share Tech Mono", monospace;
+        font-size: 0.75rem;
+        padding: 5px 14px;
+        cursor: pointer;
+        letter-spacing: 0.08em;
+        transition: all 0.15s;
+      }
+
+      .chip:hover {
+        background: rgba(201, 168, 76, 0.15);
+        border-color: rgba(201, 168, 76, 0.5);
+        color: var(--gold);
+      }
+
+      .chip:disabled {
+        opacity: 0.25;
+        cursor: not-allowed;
+      }
+
+      #overlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(10, 46, 26, 0.95);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+        gap: 20px;
+        border-radius: 8px;
+        transition: opacity 0.4s;
+      }
+
+      #overlay.hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      #gameoverOverlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(10, 46, 26, 0.96);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+        gap: 14px;
+        border-radius: 8px;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.4s;
+      }
+
+      #gameoverOverlay.visible {
+        opacity: 1;
+        pointer-events: all;
+      }
+
+      .gameover-icon {
+        font-size: 3rem;
+        animation: floatCard 2s ease-in-out infinite;
+      }
+
+      @keyframes floatCard {
+        0%,
+        100% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(-8px);
+        }
+      }
+
+      .gameover-title {
+        font-family: "Playfair Display", serif;
+        font-size: 1.8rem;
+        font-weight: 900;
+        color: var(--gold);
+        letter-spacing: 0.06em;
+        text-shadow: 0 0 20px rgba(201, 168, 76, 0.4);
+      }
+
+      .gameover-sub {
+        font-size: 0.8rem;
+        color: rgba(201, 168, 76, 0.6);
+        letter-spacing: 0.1em;
+      }
+
+      #playAgainBtn {
+        margin-top: 8px;
+        background: linear-gradient(135deg, var(--gold), #a07828);
+        border: none;
+        border-radius: 4px;
+        color: #1a1a0a;
+        font-family: "Playfair Display", serif;
+        font-size: 1rem;
+        font-weight: 700;
+        padding: 12px 36px;
+        cursor: pointer;
+        letter-spacing: 0.08em;
+        transition:
+          opacity 0.2s,
+          transform 0.1s;
+        box-shadow: 0 4px 20px rgba(201, 168, 76, 0.3);
+      }
+
+      #playAgainBtn:hover {
+        opacity: 0.9;
+        transform: scale(1.03);
+      }
+      #playAgainBtn:active {
+        transform: scale(0.97);
+      }
+
+      .spinner {
+        width: 40px;
+        height: 40px;
+        border: 2px solid rgba(201, 168, 76, 0.2);
+        border-top-color: var(--gold);
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .overlay-text {
+        color: rgba(201, 168, 76, 0.7);
+        font-size: 0.8rem;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+      }
+
+      .corner-suit {
+        position: fixed;
+        font-size: 6rem;
+        opacity: 0.09;
+        pointer-events: none;
+        z-index: 11;
+        line-height: 1;
+        display: block;
+      }
+      .corner-suit.tl {
+        top: 20px;
+        left: 20px;
+      }
+      .corner-suit.tr {
+        top: 20px;
+        right: 20px;
+      }
+      .corner-suit.bl {
+        bottom: 20px;
+        left: 20px;
+      }
+      .corner-suit.br {
+        bottom: 20px;
+        right: 20px;
+      }
+
+      @media (max-width: 1100px) {
+        .corner-suit {
+          display: none !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <span class="corner-suit tl">♠</span>
+    <span class="corner-suit tr">♥</span>
+    <span class="corner-suit bl">♣</span>
+    <span class="corner-suit br">♦</span>
+
+    <div class="layout">
+      <header>
+        <div class="logo">
+          <h1>Blackjack</h1>
+          <span class="suits">♠ ♥ ♣ ♦</span>
+        </div>
+        <div class="status-badge">
+          <div class="status-dot" id="statusDot"></div>
+          <span id="statusText">Connecting…</span>
+        </div>
+      </header>
+
+      <div class="terminal-wrap">
+        <div id="overlay">
+          <div class="spinner"></div>
+          <div class="overlay-text">Connecting to table…</div>
+        </div>
+        <div id="gameoverOverlay">
+          <div class="gameover-icon">🃏</div>
+          <div class="gameover-title">Game Over</div>
+          <div class="gameover-sub" id="gameoverSub">Thanks for playing!</div>
+          <button id="playAgainBtn">Play Again</button>
+        </div>
+        <div class="terminal-chrome">
+          <div class="dot red"></div>
+          <div class="dot yellow"></div>
+          <div class="dot green"></div>
+          <div class="terminal-title">blackjack — terminal</div>
+        </div>
+        <div id="terminal"></div>
+      </div>
+
+      <div class="input-section">
+        <div class="prompt-display" id="promptDisplay">
+          Waiting for connection…
+        </div>
+        <div class="input-row">
+          <span class="input-prefix">›</span>
+          <input
+            id="userInput"
+            type="text"
+            placeholder="Type your input…"
+            disabled
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <button id="sendBtn" disabled>Send</button>
+        </div>
+        <div class="quick-actions">
+          <button class="chip" id="chipH" disabled>Hit (h)</button>
+          <button class="chip" id="chipS" disabled>Stand (s)</button>
+          <button class="chip" id="chipY" disabled>Yes (y)</button>
+          <button class="chip" id="chipN" disabled>No (n)</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.js"></script>
+
+    <script>
+      const term = new Terminal({
+        theme: {
+          background: "#0c0c0c",
+          foreground: "#f5ecd7",
+          cursor: "#c9a84c",
+          cursorAccent: "#0c0c0c",
+          green: "#00ff88",
+          yellow: "#c9a84c",
+          brightYellow: "#f0c96e",
+          brightGreen: "#00ffaa",
+          red: "#e74c3c",
+          brightWhite: "#ffffff",
+        },
+        fontFamily: '"Share Tech Mono", "Courier New", monospace',
+        fontSize: 14,
+        lineHeight: 1.5,
+        cursorBlink: true,
+        cursorStyle: "underline",
+        convertEol: true,
+        scrollback: 500,
+      });
+
+      const fitAddon = new FitAddon.FitAddon();
+      term.loadAddon(fitAddon);
+      term.open(document.getElementById("terminal"));
+      fitAddon.fit();
+
+      window.addEventListener("resize", () => fitAddon.fit());
+
+      const overlay = document.getElementById("overlay");
+      const statusDot = document.getElementById("statusDot");
+      const statusText = document.getElementById("statusText");
+      const promptDisplay = document.getElementById("promptDisplay");
+      const userInput = document.getElementById("userInput");
+      const sendBtn = document.getElementById("sendBtn");
+      const chipH = document.getElementById("chipH");
+      const chipS = document.getElementById("chipS");
+      const chipY = document.getElementById("chipY");
+      const chipN = document.getElementById("chipN");
+
+      let ws = null;
+      let currentPrompt = "";
+
+      function setConnected(yes) {
+        if (yes) {
+          statusDot.className = "status-dot connected";
+          statusText.textContent = "Live";
+          overlay.classList.add("hidden");
+          setInputEnabled(true);
+        } else {
+          statusDot.className = "status-dot error";
+          statusText.textContent = "Disconnected";
+          setInputEnabled(false);
+        }
+      }
+
+      function setInputEnabled(on) {
+        userInput.disabled = !on;
+        sendBtn.disabled = !on;
+        [chipH, chipS, chipY, chipN].forEach((c) => (c.disabled = !on));
+        if (on) userInput.focus();
+      }
+
+      function colorize(text) {
+        return text
+          .replace(/\b(21|Blackjack|blackjack)\b/g, "\x1b[93m$1\x1b[0m")
+          .replace(/\b(bust|busted|Bust|Busted)\b/g, "\x1b[91m$1\x1b[0m")
+          .replace(/\b(win|wins|Win|Wins)\b/gi, "\x1b[92m$1\x1b[0m")
+          .replace(/(♥|♦)/g, "\x1b[91m$1\x1b[0m")
+          .replace(/(♠|♣)/g, "\x1b[37m$1\x1b[0m")
+          .replace(/(\$[\d,]+)/g, "\x1b[93m$1\x1b[0m")
+          .replace(/---(.+)---/g, "\x1b[90m---$1---\x1b[0m");
+      }
+
+      function connect() {
+        const proto = location.protocol === "https:" ? "wss:" : "ws:";
+        const wsUrl = `${proto}//${location.host}`;
+        ws = new WebSocket(wsUrl);
+
+        ws.onopen = () => {
+          setConnected(true);
+          setInputEnabled(true);
+          term.writeln("\x1b[92m── Connected to Blackjack Server ──\x1b[0m\r\n");
+        };
+
+        ws.onmessage = (e) => {
+          const msg = JSON.parse(e.data);
+          if (msg.type === "output") {
+            const text = msg.data;
+            if (text.startsWith("PROMPT:")) {
+              currentPrompt = text.slice(7);
+              promptDisplay.textContent = "› " + currentPrompt;
+              userInput.placeholder = currentPrompt;
+              userInput.focus();
+
+              // Update chip visibility
+              const lc = currentPrompt.toLowerCase();
+              const isAction = lc.includes("(h)it") || lc.includes("(s)tand");
+              const isYN = lc.includes("play again") || lc.includes("y/n");
+              const isBet = lc.includes("bet");
+              chipH.style.display = isAction ? "" : "none";
+              chipS.style.display = isAction ? "" : "none";
+              chipY.style.display = isYN ? "" : "none";
+              chipN.style.display = isYN ? "" : "none";
+            } else {
+              term.writeln(colorize(text));
+
+              const lower = text.toLowerCase();
+              if (lower.includes("thanks for playing")) {
+                setTimeout(() => showGameOver("Thanks for playing! 🎰"), 800);
+              } else if (
+                lower.includes("no more funds") ||
+                lower.includes("out of funds")
+              ) {
+                setTimeout(() => showGameOver("You ran out of funds! 💸"), 800);
+              }
+            }
+          }
+        };
+
+        ws.onclose = () => {
+          setConnected(false);
+        };
+
+        ws.onerror = () => {
+          setConnected(false);
+        };
+      }
+
+      function showGameOver(msg) {
+        const overlay = document.getElementById("gameoverOverlay");
+        document.getElementById("gameoverSub").textContent = msg || "Thanks for playing!";
+        setInputEnabled(false);
+        overlay.classList.add("visible");
+      }
+
+      function hideGameOver() {
+        document.getElementById("gameoverOverlay").classList.remove("visible");
+      }
+
+      document.getElementById("playAgainBtn").addEventListener("click", () => {
+        hideGameOver();
+        term.clear();
+        term.writeln("\x1b[93m── New session started ──\x1b[0m\r\n");
+        promptDisplay.textContent = "";
+        if (ws) ws.close();
+        connect();
+      });
+
+      function sendInput(val) {
+        if (!ws || ws.readyState !== WebSocket.OPEN) return;
+        const v = val !== undefined ? val : userInput.value.trim();
+        if (!v) return;
+        term.writeln(`\x1b[90m> ${v}\x1b[0m`);
+        ws.send(JSON.stringify({ type: "input", data: v }));
+        userInput.value = "";
+        promptDisplay.textContent = "";
+      }
+
+      sendBtn.addEventListener("click", () => sendInput());
+      userInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") sendInput();
+      });
+
+      chipH.addEventListener("click", () => sendInput("h"));
+      chipS.addEventListener("click", () => sendInput("s"));
+      chipY.addEventListener("click", () => sendInput("y"));
+      chipN.addEventListener("click", () => sendInput("n"));
+
+      [chipH, chipS, chipY, chipN].forEach((c) => (c.style.display = "none"));
+
+      connect();
+    </script>
+  </body>
+</html>

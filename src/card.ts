@@ -1,4 +1,4 @@
-import { InterfaceCard, Suit } from "./types";
+import { InterfaceCard, Suit } from "./types.ts";
 
 class Card implements InterfaceCard {
   static readonly CARD_VALUES: Record<number, string> = {
@@ -17,8 +17,8 @@ class Card implements InterfaceCard {
     13: "K",
   };
 
-  value: number;
-  suit: Suit;
+  readonly value: number;
+  readonly suit: Suit;
 
   constructor(value: number, suit: Suit) {
     this.value = value;

@@ -12,13 +12,11 @@ export interface InterfaceCard {
 }
 
 export interface InterfaceDeck {
-  cards: InterfaceCard[];
   shuffle(): void;
   drawCard(): InterfaceCard | null;
 }
 
 export interface InterfacePlayer {
-  handCards: InterfaceCard[];
   receiveCard(card: InterfaceCard): void;
   revealHand(): InterfaceCard[];
   getScore(): number;

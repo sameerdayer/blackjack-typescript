@@ -1,19 +1,27 @@
 {
   "name": "blackjack",
   "version": "1.0.0",
-  "main": "game.js",
+  "type": "module",
+  "description": "",
   "scripts": {
-    "dev": "tsc && node game.js"
+    "build": "tsc --project tsconfig.json",
+    "start": "node dist/server.js",
+    "dev:web": "tsx src/server.ts",
+    "dev:cli": "tsx src/game.ts"
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
-  "description": "",
-  "devDependencies": {
-    "@types/node": "^22.15.27",
-    "typescript": "^5.8.3"
-  },
+  "license": "MIT",
   "dependencies": {
-    "prompt-sync": "^4.2.0"
+    "dotenv": "^17.4.2",
+    "prompt-sync": "^4.2.0",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.17",
+    "@types/prompt-sync": "^4.2.3",
+    "@types/ws": "^8.5.14",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
   }
 }

@@ -1,7 +1,7 @@
-import { InterfacePlayer } from "./types";
-import Card from "./card";
+import { InterfacePlayer } from "./types.ts";
+import Card from "./card.ts";
 export class Player implements InterfacePlayer {
-  handCards: Card[] = [];
+  protected handCards: Card[] = [];
 
   receiveCard(card: Card): void {
     if (card instanceof Card) {

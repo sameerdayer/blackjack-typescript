@@ -1,8 +1,8 @@
-import Card from "./card";
-import { InterfaceDeck, Suit } from "./types";
+import Card from "./card.ts";
+import { InterfaceDeck, Suit } from "./types.ts";
 
 export class Deck implements InterfaceDeck {
-  cards: Card[] = [];
+  private cards: Card[] = [];
 
   constructor() {
     this.initializeDeck();
@@ -18,7 +18,9 @@ export class Deck implements InterfaceDeck {
 
   shuffle(): void {
     for (let i = this.cards.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
+      const array = new Uint32Array(1);
+      crypto.getRandomValues(array);
+      const j = array[0] % (i + 1);
       [this.cards[i], this.cards[j]] = [this.cards[j], this.cards[i]];
     }
   }
